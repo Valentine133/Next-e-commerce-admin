@@ -1,6 +1,8 @@
 import axios from 'axios';
 import React, { useState } from 'react';
 import {useRouter} from 'next/router';
+import {ReactSortable} from 'react-sortablejs';
+import Spinner from './Spinner';
 
 const ProductForm = ({
   _id,
@@ -8,18 +10,20 @@ const ProductForm = ({
   sku: existingSku, 
   description: existingDescription, 
   price: existingPrice,
-  images,
+  images: existingImages,
 }) => {
   const [title, setTitle] = useState(existingTitle || '');
   const [description, setDescription] = useState(existingDescription  || '');
   const [price, setPrice] = useState(existingPrice  || '');
+  const [images, setImages] = useState(existingImages || []);
   const [sku, setSku] = useState(existingSku  || '');
   const [goToProducts, setGoToProducts] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const router = useRouter();
 
   const saveProduct = async (e) => {
     e.preventDefault();
-    const data = {title, sku, description, price};
+    const data = {images, title, sku, description, price};
 
     if (_id) {
       //update
@@ -35,24 +39,34 @@ const ProductForm = ({
     router.push('/products');
   }
 
-  const uploadImage = async (e) => {
+  const uploadImages = async (e) => {
     const files = e.target?.files;
     if (files?.length > 0) {
+      setIsUploading(true);
       const data = new FormData();
       for (const file of files) {
         data.append('file', file);
       }
-      await fetch('/api/upload', {
-        method: 'POST',
-        body: data,
-      });
+      try {
+        const res = await axios.post('/api/upload', data);
+        setImages(oldImages => {
+          return [...oldImages, ...res.data.links];
+        });
+        setIsUploading(false);
+      } catch (error) {
+        console.error("Error uploading images:", error);
+      }
     }
+  };
+
+  function updateImagesOrder(images) {
+    setImages(images);
   }
 
   return (
     <form onSubmit={saveProduct}>
       <label>Images</label>
-      <div className='mb-3'>
+      <div className='mb-3 flex flex-wrap'>
         <div className="flex items-center justify-center w-full">
             <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
                 <div className="flex flex-col items-center justify-center pt-5 pb-6">
@@ -60,13 +74,32 @@ const ProductForm = ({
                     <p className="mb-2 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG (MAX. 2MB)</p>
                 </div>
-                <input onChange={uploadImage} id="dropzone-file" type="file" className="hidden" />
+                <input onChange={uploadImages} id="dropzone-file" type="file" className="hidden" />
             </label>
         </div>
+        <ReactSortable 
+          list={images} 
+          setList={updateImagesOrder}
+          className="flex flex-wrap gap-1"
+          >
+          {!!images?.length && images.map(link => (
+            <div key={link} className="h-24 mt-2">
+              <img src={link} alt="" className="h-24 rounded-lg border-2 border-gray-300"/>
+            </div>
+          ))}
+        </ReactSortable>
+
+        {isUploading && (
+          <div className="h-24 p-1 flex items-center">
+            <Spinner />
+          </div>
+        )}
+
         {!images?.length && (
           <div>No images in this product</div>
         )}
       </div>
+
       <label>Title</label>
       <input 
         className='form-control' 
