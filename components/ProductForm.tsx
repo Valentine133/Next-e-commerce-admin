@@ -4,7 +4,17 @@ import {useRouter} from 'next/router';
 import {ReactSortable} from 'react-sortablejs';
 import Spinner from './Spinner';
 
-const ProductForm = ({
+type ProductFormProps = {
+  title: string,
+  description: string,
+  price: number,
+  images: string[],
+  category: string,
+  sku: number,
+  _id: string
+};
+
+const ProductForm: React.FC<ProductFormProps> = ({
   _id,
   title: existingTitle, 
   sku: existingSku, 
@@ -30,7 +40,7 @@ const ProductForm = ({
     });
   }, []);
 
-  const saveProduct = async (e) => {
+  const saveProduct = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
     const data = {images, title, sku, description, price, category};
 
@@ -48,7 +58,7 @@ const ProductForm = ({
     router.push('/products');
   }
 
-  const uploadImages = async (e) => {
+  const uploadImages = async (e: { target: { files: any; }; }) => {
     const files = e.target?.files;
     if (files?.length > 0) {
       setIsUploading(true);
@@ -68,7 +78,7 @@ const ProductForm = ({
     }
   };
 
-  function updateImagesOrder(images) {
+  function updateImagesOrder(images: React.SetStateAction<string[]>) {
     setImages(images);
   }
 
@@ -118,8 +128,9 @@ const ProductForm = ({
         onChange={e => setTitle(e.target.value)}/>
       <label>Category</label>
       <select 
+        value={category} 
         onChange={e => setCategory(e.target.value)} 
-        class="form-control"
+        className="form-control"
       >
         <option value="">Uncategorized</option>
         {categories.length > 0 && categories.map(category => (
