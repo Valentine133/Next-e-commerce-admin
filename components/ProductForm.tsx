@@ -22,9 +22,11 @@ const ProductForm: React.FC<ProductFormProps> = ({
   price: existingPrice,
   images: existingImages,
   category: assignedCategory,
+  properties: assignedProperties,
 }) => {
   const [title, setTitle] = useState(existingTitle || '');
   const [category, setCategory] = useState(assignedCategory || '');
+  const [productProperties, setProductProperties] = useState(assignedProperties || {});
   const [description, setDescription] = useState(existingDescription  || '');
   const [price, setPrice] = useState(existingPrice  || '');
   const [images, setImages] = useState(existingImages || []);
@@ -42,7 +44,15 @@ const ProductForm: React.FC<ProductFormProps> = ({
 
   const saveProduct = async (e: { preventDefault: () => void; }) => {
     e.preventDefault();
-    const data = {images, title, sku, description, price, category};
+    const data = {
+      images, 
+      title, 
+      sku, 
+      description, 
+      price, 
+      category,
+      properties: productProperties
+    };
 
     if (_id) {
       //update
@@ -82,30 +92,79 @@ const ProductForm: React.FC<ProductFormProps> = ({
     setImages(images);
   }
 
+  function setProductProp(propName: string, value: string) {
+    setProductProperties({...productProperties, [propName]: value});
+  }
+
+  const propertiesToFill = [];
+
+  if (categories.length > 0 && category) {
+    let catInfo = categories.find(({_id}) => _id === category);
+    propertiesToFill.push(...catInfo.properties);
+
+    while(catInfo.parent?._id) {
+      const parentCat = categories.find(({_id}) => _id === catInfo.parent._id);
+      propertiesToFill.push(...parentCat.properties);
+      catInfo = parentCat;
+    }
+  }
+
   return (
     <form onSubmit={saveProduct}>
       <label>Images</label>
-      <div className='mb-3 flex flex-wrap'>
+      <div className="mb-3 flex flex-wrap">
         <div className="flex items-center justify-center w-full">
-            <label htmlFor="dropzone-file" className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600">
-                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                    <svg aria-hidden="true" className="w-10 h-10 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                    <p className="mb-2 text-sm text-gray-500 dark:text-gray-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">PNG, JPG (MAX. 2MB)</p>
-                </div>
-                <input onChange={uploadImages} id="dropzone-file" type="file" className="hidden" />
-            </label>
+          <label
+            htmlFor="dropzone-file"
+            className="flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-700 hover:bg-gray-100 dark:border-gray-600 dark:hover:border-gray-500 dark:hover:bg-gray-600"
+          >
+            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+              <svg
+                aria-hidden="true"
+                className="w-10 h-10 mb-3 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                ></path>
+              </svg>
+              <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                <span className="font-semibold">Click to upload</span> or drag
+                and drop
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                PNG, JPG (MAX. 2MB)
+              </p>
+            </div>
+            <input
+              onChange={uploadImages}
+              id="dropzone-file"
+              type="file"
+              className="hidden"
+            />
+          </label>
         </div>
-        <ReactSortable 
-          list={images} 
+        <ReactSortable
+          list={images}
           setList={updateImagesOrder}
           className="flex flex-wrap gap-1"
-          >
-          {!!images?.length && images.map(link => (
-            <div key={link} className="h-24 mt-2">
-              <img src={link} alt="" className="h-24 rounded-lg border-2 border-gray-300"/>
-            </div>
-          ))}
+        >
+          {!!images?.length &&
+            images.map((link) => (
+              <div key={link} className="h-24 mt-2">
+                <img
+                  src={link}
+                  alt=""
+                  className="h-24 rounded-lg border-2 border-gray-300"
+                />
+              </div>
+            ))}
         </ReactSortable>
 
         {isUploading && (
@@ -114,54 +173,79 @@ const ProductForm: React.FC<ProductFormProps> = ({
           </div>
         )}
 
-        {!images?.length && (
-          <div>No images in this product</div>
-        )}
+        {!images?.length && <div>No images in this product</div>}
       </div>
 
       <label>Title</label>
-      <input 
-        className='form-control' 
-        type="text" 
-        placeholder='Title' 
-        value={title} 
-        onChange={e => setTitle(e.target.value)}/>
+      <input
+        className="form-control"
+        type="text"
+        placeholder="Title"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+      />
       <label>Category</label>
-      <select 
-        value={category} 
-        onChange={e => setCategory(e.target.value)} 
+      <select
+        value={category}
+        onChange={(e) => setCategory(e.target.value)}
         className="form-control"
       >
         <option value="">Uncategorized</option>
-        {categories.length > 0 && categories.map(category => (
-          <option key={category._id} value={category._id}>{category.name}</option>
-        ))}
+        {categories.length > 0 &&
+          categories.map((category) => (
+            <option key={category._id} value={category._id}>
+              {category.name}
+            </option>
+          ))}
       </select>
+
+      {categories.length > 0 &&
+        propertiesToFill.map((property) => (
+          <div className="flex gap-2">
+            <div>{property.name}</div>
+            <select 
+              value={productProperties[property.name]}
+              onChange={(e) => setProductProp(property.name, e.target.value)}
+              className="form-control">
+              {property.values.map((value: string) => (
+                <option key={value} value={value}>
+                  {value}
+                </option>
+              ))}
+            </select>
+          </div>
+        ))}
+
       <label>SKU</label>
-      <input 
-        className='form-control' 
-        type="text" 
-        placeholder='SKU' 
-        value={sku} 
-        onChange={e => setSku(e.target.value)}/>
+      <input
+        className="form-control"
+        type="text"
+        placeholder="SKU"
+        value={sku}
+        onChange={(e) => setSku(e.target.value)}
+      />
       <label>Description</label>
-      <textarea 
-        className='form-control' 
+      <textarea
+        className="form-control"
         name="description"
-        rows="5" 
+        rows="5"
         value={description}
-        onChange={e => setDescription(e.target.value)}
-        placeholder='Description'/>
+        onChange={(e) => setDescription(e.target.value)}
+        placeholder="Description"
+      />
       <label>Price (USD)</label>
-      <input 
-        className='form-control' 
-        type="number" 
+      <input
+        className="form-control"
+        type="number"
         value={price}
-        onChange={e => setPrice(e.target.value)}
-        placeholder='Price' />
-      <button type='submit' className='btn-primary'>Save</button>
+        onChange={(e) => setPrice(e.target.value)}
+        placeholder="Price"
+      />
+      <button type="submit" className="btn-primary">
+        Save
+      </button>
     </form>
-  )
+  );
 }
 
 export default ProductForm
